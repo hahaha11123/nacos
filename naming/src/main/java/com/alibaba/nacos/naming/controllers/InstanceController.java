@@ -81,7 +81,8 @@ public class InstanceController {
     
     @Autowired
     private InstanceOperatorClientImpl instanceServiceV2;
-    
+
+    //默认的实现类
     @Autowired
     private InstanceOperatorServiceImpl instanceServiceV1;
     
@@ -109,7 +110,8 @@ public class InstanceController {
                 .optional(request, CommonParams.NAMESPACE_ID, Constants.DEFAULT_NAMESPACE_ID);
         final String serviceName = WebUtils.required(request, CommonParams.SERVICE_NAME);
         NamingUtils.checkServiceNameFormat(serviceName);
-        
+
+        //构建一个服务实例，默认临时实例
         final Instance instance = HttpRequestInstanceBuilder.newBuilder()
                 .setDefaultInstanceEphemeral(switchDomain.isDefaultInstanceEphemeral()).setRequest(request).build();
         
