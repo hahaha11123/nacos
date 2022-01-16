@@ -97,15 +97,18 @@ public class ClientBeatCheckTask implements BeatCheckTask {
             
             // first set health status of instances:
             for (Instance instance : instances) {
+                //判断距离最后一次发送心跳时间是否超过约定的超时时间，默认15s
                 if (System.currentTimeMillis() - instance.getLastBeat() > instance.getInstanceHeartBeatTimeOut()) {
                     if (!instance.isMarked()) {
                         if (instance.isHealthy()) {
+                            //标记当前实例为不健康状态
                             instance.setHealthy(false);
                             Loggers.EVT_LOG
                                     .info("{POS} {IP-DISABLED} valid: {}:{}@{}@{}, region: {}, msg: client timeout after {}, last beat: {}",
                                             instance.getIp(), instance.getPort(), instance.getClusterName(),
                                             service.getName(), UtilsAndCommons.LOCALHOST_SITE,
                                             instance.getInstanceHeartBeatTimeOut(), instance.getLastBeat());
+                            //发布service被改变的事件
                             getPushService().serviceChanged(service);
                         }
                     }
@@ -122,11 +125,12 @@ public class ClientBeatCheckTask implements BeatCheckTask {
                 if (instance.isMarked()) {
                     continue;
                 }
-                
+                //判断距离最后一次发送心跳时间是否超过约定的超时时间，默认30s
                 if (System.currentTimeMillis() - instance.getLastBeat() > instance.getIpDeleteTimeout()) {
                     // delete instance
                     Loggers.SRV_LOG.info("[AUTO-DELETE-IP] service: {}, ip: {}", service.getName(),
                             JacksonUtils.toJson(instance));
+                    //删除实例
                     deleteIp(instance);
                 }
             }

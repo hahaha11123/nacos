@@ -462,7 +462,7 @@ public class ServiceManager implements RecordListener<Service> {
                 service.getClusterMap().put(cluster.getName(), cluster);
             }
             service.validate();
-            
+            //缓存Service，开启客户端心跳检测任务、注册一致性监听事件
             putServiceAndInit(service);
             if (!local) {
                 addOrReplaceService(service);
@@ -487,7 +487,7 @@ public class ServiceManager implements RecordListener<Service> {
         Service service = getService(namespaceId, serviceName);
         
         checkServiceIsNull(service, namespaceId, serviceName);
-        
+        //添加服务实例
         addInstance(namespaceId, serviceName, instance.isEphemeral(), instance);
     }
     
@@ -631,17 +631,19 @@ public class ServiceManager implements RecordListener<Service> {
      */
     public void addInstance(String namespaceId, String serviceName, boolean ephemeral, Instance... ips)
             throws NacosException {
-        
+        // 构建实例列表Key，格式com.alibaba.nacos.naming.iplist.[ephemeral.]namespaceId##serviceName
         String key = KeyBuilder.buildInstanceListKey(namespaceId, serviceName, ephemeral);
         
         Service service = getService(namespaceId, serviceName);
         
         synchronized (service) {
             List<Instance> instanceList = addIpAddresses(service, ephemeral, ips);
-            
+            // 构建一个保存服务实例列表的载体
             Instances instances = new Instances();
             instances.setInstanceList(instanceList);
-            
+
+            // 一致性委托类，DelegateConsistencyServiceImpl
+            // 真正干活的是：临时实例DistroConsistencyServiceImpl，持久化实例PersistentConsistencyServiceDelegateImpl
             consistencyService.put(key, instances);
         }
     }
@@ -765,7 +767,7 @@ public class ServiceManager implements RecordListener<Service> {
      */
     public List<Instance> updateIpAddresses(Service service, String action, boolean ephemeral, Instance... ips)
             throws NacosException {
-        
+        //获取服务的所有实例
         Datum datum = consistencyService
                 .get(KeyBuilder.buildInstanceListKey(service.getNamespaceId(), service.getName(), ephemeral));
         
@@ -787,6 +789,7 @@ public class ServiceManager implements RecordListener<Service> {
         
         for (Instance instance : ips) {
             if (!service.getClusterMap().containsKey(instance.getClusterName())) {
+                //客户端集群初始化，默认集群名称default
                 Cluster cluster = new Cluster(instance.getClusterName(), service);
                 cluster.init();
                 service.getClusterMap().put(instance.getClusterName(), cluster);
@@ -868,6 +871,7 @@ public class ServiceManager implements RecordListener<Service> {
         putService(service);
         service = getService(service.getNamespaceId(), service.getName());
         service.init();
+        //注册临时和持久化事件（因为一个服务下面包括临时实例和持久实例），监听器就是service本身，一致性服务类中会发布事件通知
         consistencyService
                 .listen(KeyBuilder.buildInstanceListKey(service.getNamespaceId(), service.getName(), true), service);
         consistencyService

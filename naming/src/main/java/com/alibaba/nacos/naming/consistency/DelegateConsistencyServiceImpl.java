@@ -101,7 +101,10 @@ public class DelegateConsistencyServiceImpl implements ConsistencyService {
         }
         return Optional.ofNullable(errorMsg);
     }
-    
+
+    /**
+     * 根据key判断用哪种一致性协议
+     */
     private ConsistencyService mapConsistencyService(String key) {
         return KeyBuilder.matchEphemeralKey(key) ? ephemeralConsistencyService : persistentConsistencyService;
     }

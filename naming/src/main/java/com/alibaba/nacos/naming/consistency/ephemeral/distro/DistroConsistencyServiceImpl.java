@@ -103,11 +103,13 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
     
     @PostConstruct
     public void init() {
+        //开启事件通知任务
         GlobalExecutor.submitDistroNotifyTask(notifier);
     }
     
     @Override
     public void put(String key, Record value) throws NacosException {
+        //填充dataStore，发布onChange事件
         onPut(key, value);
         // If upgrade to 2.0.X, do not sync for v1.
         if (ApplicationUtils.getBean(UpgradeJudgement.class).isUseGrpcFeatures()) {
@@ -141,13 +143,14 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
             datum.value = (Instances) value;
             datum.key = key;
             datum.timestamp.incrementAndGet();
+            //将服务实例载体添加到缓存
             dataStore.put(key, datum);
         }
-        
+        //前面createEmptyService的时候注册了两个监听器
         if (!listeners.containsKey(key)) {
             return;
         }
-        
+        //添加通知任务，相当于发布事件通知
         notifier.addTask(key, DataOperation.CHANGE);
     }
     
@@ -394,8 +397,10 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
                 return;
             }
             if (action == DataOperation.CHANGE) {
+                //加入到待处理的key中，主要用于上面去重
                 services.put(datumKey, StringUtils.EMPTY);
             }
+            //放入阻塞队列
             tasks.offer(Pair.with(datumKey, action));
         }
         
@@ -421,7 +426,7 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
             try {
                 String datumKey = pair.getValue0();
                 DataOperation action = pair.getValue1();
-                
+                //从待处理的key中移除掉
                 services.remove(datumKey);
                 
                 int count = 0;
@@ -429,7 +434,7 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
                 if (!listeners.containsKey(datumKey)) {
                     return;
                 }
-                
+                //遍历监听器，根据事件类型执行不同的回调方法
                 for (RecordListener listener : listeners.get(datumKey)) {
                     
                     count++;

@@ -293,6 +293,8 @@ public class InstanceOperatorServiceImpl implements InstanceOperator {
             Loggers.SRV_LOG.warn("[CLIENT-BEAT] The instance has been removed for health mechanism, "
                     + "perform data compensation operations, beat: {}, serviceName: {}", clientBeat, serviceName);
             instance = parseInstance(builder.setBeatInfo(clientBeat).setServiceName(serviceName).build());
+            // 如果没有实例就重新注册一个，针对临时实例。
+            // 场景：客户端网络异常心跳丢失，nacos会把该实例踢掉，等到客户端网络恢复后会继续保活心跳，nacos也要恢复该实例
             serviceManager.registerInstance(namespaceId, serviceName, instance);
         }
         
