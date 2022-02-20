@@ -108,7 +108,7 @@ public class ClientBeatCheckTask implements BeatCheckTask {
                                             instance.getIp(), instance.getPort(), instance.getClusterName(),
                                             service.getName(), UtilsAndCommons.LOCALHOST_SITE,
                                             instance.getInstanceHeartBeatTimeOut(), instance.getLastBeat());
-                            //发布service被改变的事件
+                            //发布service被改变的事件，udp广播通知客户端（比如ribbon，做负载均衡）
                             getPushService().serviceChanged(service);
                         }
                     }
